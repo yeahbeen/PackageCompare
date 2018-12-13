@@ -9,18 +9,32 @@ import ftplib
 
 top = Tk()
 top.title("文件对比工具")
-top.geometry('400x200')
+#屏幕宽度和高度
+sw = top.winfo_screenwidth()
+sh = top.winfo_screenheight()
+#窗口宽度和高度
+ww = 400
+wh = 200
+#窗口居中
+top.geometry("%dx%d+%d+%d" %(ww,wh,(sw-ww)/2,(sh-wh)/2))
 E1 = Entry(top)
 E2 = Entry(top)
 L1 = Label(top)
+initdir = "."
 def openfile1():
-    filename=tkinter.filedialog.askopenfilename()
-    E1.delete(0,END)
-    E1.insert(0,filename)
+    global initdir
+    filename=tkinter.filedialog.askopenfilename(initialdir = initdir)
+    if filename != "":
+        E1.delete(0,END)
+        E1.insert(0,filename)
+        initdir = os.path.split(filename)[0]
 def openfile2():
-    filename=tkinter.filedialog.askopenfilename()
-    E2.delete(0,END)
-    E2.insert(0,filename)
+    global initdir
+    filename=tkinter.filedialog.askopenfilename(initialdir = initdir)
+    if filename != "":
+        E2.delete(0,END)
+        E2.insert(0,filename)
+        initdir = os.path.split(filename)[0]
 def extract(filename,dir):
     # dir = os.path.splitext(filename)[0]
     if os.path.exists(dir):
@@ -81,43 +95,73 @@ def downfile(filename):
         print(localpath)
         shutil.copy(filename,localpath)
         return localpath
-  
+        
 def compare():
-    L1.config(text="正在处理...")
-    B3.config(state="disabled")
+    try:
+        real_compare()
+    except Exception as e:
+        import traceback
+        estr = traceback.format_exc()
+        tkinter.messagebox.showinfo("异常",estr)
+        L1.config(text="发生错误！")
+  
+def real_compare():
     t0 = time.time()
     print(t0)
     file1 = E1.get().strip()
+    if file1 == "":
+        tkinter.messagebox.showinfo(message='请先选择文件1')
+        return
+    file2 = E2.get().strip()  
+    if file2 == "":
+        tkinter.messagebox.showinfo(message='请先选择文件2')
+        return
+    L1.config(text="正在处理...")
+    B3.config(state="disabled")        
     file1 = downfile(file1)
     print(file1)
     dir1 = os.path.splitext(os.path.split(file1)[1])[0]
-    file2 = E2.get().strip()
+    
     file2 = downfile(file2)
     print(file2)
     dir2 = os.path.splitext(os.path.split(file2)[1])[0]
     
     extract(file1,dir1)
     extract(file2,dir2)
-    cmd = "BCompare.exe /silent @diff_to_html.txt " + dir1 + " " + dir2 + " report.html"
+    savefile = os.path.split(dir1)[1]+" vs "+os.path.split(dir2)[1]+".html"
+    cmd = "BCompare.exe /silent @diff_to_html.txt " + dir1 + " " + dir2 + " \"" + savefile +"\""
     print(cmd)
     tmp = os.system(cmd)
     print(tmp)
     print(time.time()-t0)
     L1.config(text="处理结束")
     B3.config(state="normal")
-    tkinter.messagebox.showinfo("完成","处理完成，结果存放在report.html")
+    tkinter.messagebox.showinfo("完成","处理完成，结果存放在:"+savefile)
     
-B1 = Button(top, command = openfile1, text = "打开文件1")
-B2 = Button(top, command = openfile2, text = "打开文件2")
+def opendir():
+    file1 = E1.get().strip()
+    dir1 = os.path.splitext(os.path.split(file1)[1])[0]
+    file2 = E2.get().strip()
+    dir2 = os.path.splitext(os.path.split(file2)[1])[0]
+    savefile = dir1+" vs "+dir2+".html"
+    if os.path.exists(savefile):
+        os.system("start explorer.exe /select,"+os.path.realpath(savefile))
+    else:
+        os.system("start explorer.exe .")
+    
+B1 = Button(top, command = openfile1, text = "选择文件1")
+B2 = Button(top, command = openfile2, text = "选择文件2")
 
 B3 = Button(top, command = lambda :thread_it(compare), text = "开始对比")
+B4 = Button(top, command = opendir, text = "打开结果目录")
 
-E1.place(x=10,y=10,width=300,height=25)
-E2.place(x=10,y=40,width=300,height=25)
-B1.place(x=320,y=10,width=65,height=25)
-B2.place(x=320,y=40,width=65,height=25)
+E1.place(x=10,y=15,width=300,height=25)
+E2.place(x=10,y=45,width=300,height=25)
+B1.place(x=320,y=15,width=65,height=25)
+B2.place(x=320,y=45,width=65,height=25)
 
-B3.place(x=150,y=100,width=100,height=30)
+B3.place(x=75,y=100,width=100,height=30)
+B4.place(x=225,y=100,width=100,height=30)
 L1.place(x=100,y=145,width=200,height=30)
 
 top.mainloop()
